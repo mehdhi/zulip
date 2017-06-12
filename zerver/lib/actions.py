@@ -491,6 +491,18 @@ def do_set_realm_message_editing(realm, allow_message_editing, message_content_e
     )
     send_event(event, active_user_ids(realm))
 
+def do_set_realm_notifications_stream(realm, stream, stream_id):
+    # type: (Realm, Stream, int) -> None
+    realm.notifications_stream = stream
+    realm.save(update_fields=['notifications_stream'])
+    event = dict(
+        type="realm",
+        op="update",
+        property="notifications_stream_id",
+        value=stream_id
+    )
+    send_event(event, active_user_ids(realm))
+
 def do_deactivate_realm(realm):
     # type: (Realm) -> None
     """
@@ -585,7 +597,10 @@ def do_deactivate_stream(stream, log=True):
     stream.name = new_name[:Stream.MAX_NAME_LENGTH]
     stream.save()
 
-    DefaultStream.objects.filter(realm=stream.realm, stream=stream).delete()
+    # If this is a default stream, remove it, properly sending a
+    # notification to browser clients.
+    if DefaultStream.objects.filter(realm=stream.realm, stream=stream).exists():
+        do_remove_default_stream(stream)
 
     # Remove the old stream information from remote cache.
     old_cache_key = get_stream_cache_key(old_name, stream.realm)
@@ -616,9 +631,7 @@ def do_start_email_change_process(user_profile, new_email):
     old_email = user_profile.email
     user_profile.email = new_email
 
-    context = {'support_email': settings.ZULIP_ADMINISTRATOR,
-               'verbose_support_offers': settings.VERBOSE_SUPPORT_OFFERS,
-               'realm': user_profile.realm,
+    context = {'realm': user_profile.realm,
                'old_email': old_email,
                'new_email': new_email,
                }
@@ -697,8 +710,10 @@ def render_incoming_message(message, content, message_users, realm):
 def get_recipient_user_profiles(recipient, sender_id):
     # type: (Recipient, int) -> List[UserProfile]
     if recipient.type == Recipient.PERSONAL:
-        recipients = list(set([get_user_profile_by_id(recipient.type_id),
-                               get_user_profile_by_id(sender_id)]))
+        # The sender and recipient may be the same id, so
+        # de-duplicate using a set.
+        user_ids = list({recipient.type_id, sender_id})
+        recipients = [get_user_profile_by_id(user_id) for user_id in user_ids]
         # For personals, you send out either 1 or 2 copies, for
         # personals to yourself or to someone else, respectively.
         assert((len(recipients) == 1) or (len(recipients) == 2))
@@ -1788,13 +1803,20 @@ def bulk_remove_subscriptions(users, streams):
         occupied_streams_after = list(get_occupied_streams(user_profile.realm))
 
     new_vacant_streams = [stream for stream in
-                          set(occupied_streams_before) - set(occupied_streams_after)
-                          if not stream.invite_only]
-    if new_vacant_streams:
+                          set(occupied_streams_before) - set(occupied_streams_after)]
+    new_vacant_private_streams = [stream for stream in new_vacant_streams
+                                  if stream.invite_only]
+    new_vacant_public_streams = [stream for stream in new_vacant_streams
+                                 if not stream.invite_only]
+    if new_vacant_public_streams:
         event = dict(type="stream", op="vacate",
                      streams=[stream.to_dict()
-                              for stream in new_vacant_streams])
+                              for stream in new_vacant_public_streams])
         send_event(event, active_user_ids(user_profile.realm))
+    if new_vacant_private_streams:
+        # Deactivate any newly-vacant private streams
+        for stream in new_vacant_private_streams:
+            do_deactivate_stream(stream)
 
     altered_user_dict = defaultdict(list)  # type: Dict[int, List[UserProfile]]
     streams_by_user = defaultdict(list)  # type: Dict[int, List[Stream]]
@@ -3032,9 +3054,7 @@ def do_send_confirmation_email(invitee, referrer, body):
     `invitee` is a PreregistrationUser.
     `referrer` is a UserProfile.
     """
-    context = {'referrer': referrer,
-               'support_email': settings.ZULIP_ADMINISTRATOR,
-               'verbose_support_offers': settings.VERBOSE_SUPPORT_OFFERS}
+    context = {'referrer': referrer}
 
     if referrer.realm.is_zephyr_mirror_realm:
         template_prefix = 'zerver/emails/invitation_mit'

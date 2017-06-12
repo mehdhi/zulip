@@ -533,6 +533,12 @@ class UserProfile(ModelReprMixin, AbstractBaseUser, PermissionsMixin):
     """
     EMBEDDED_BOT = 4
 
+    # For now, don't allow creating other bot types via the UI
+    ALLOWED_BOT_TYPES = [
+        DEFAULT_BOT,
+        INCOMING_WEBHOOK_BOT,
+    ]
+
     SERVICE_BOT_TYPES = [
         OUTGOING_WEBHOOK_BOT,
         EMBEDDED_BOT
@@ -1501,7 +1507,7 @@ def get_huddle_backend(huddle_hash, id_list):
             recipient = Recipient.objects.create(type_id=huddle.id,
                                                  type=Recipient.HUDDLE)
             subs_to_create = [Subscription(recipient=recipient,
-                                           user_profile=get_user_profile_by_id(user_profile_id))
+                                           user_profile_id=user_profile_id)
                               for user_profile_id in id_list]
             Subscription.objects.bulk_create(subs_to_create)
         return huddle

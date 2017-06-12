@@ -81,8 +81,8 @@ i18n_urls = [
     url(r'^accounts/password/reset/$', password_reset,
         {'post_reset_redirect': '/accounts/password/reset/done/',
          'template_name': 'zerver/reset.html',
-         'email_template_name': 'zerver/emails/password_reset.txt',
-         'subject_template_name': 'zerver/emails/password_reset.subject',
+         'email_template_name': '',
+         'subject_template_name': '',
          'password_reset_form': zerver.forms.ZulipPasswordResetForm,
          }, name='django.contrib.auth.views.password_reset'),
     url(r'^accounts/password/reset/done/$', password_reset_done,
@@ -141,7 +141,7 @@ i18n_urls = [
     url(r'^api/endpoints/$', zerver.views.integrations.api_endpoint_docs, name='zerver.views.integrations.api_endpoint_docs'),
     url(r'^integrations/$', IntegrationView.as_view()),
     url(r'^about/$', TemplateView.as_view(template_name='zerver/about.html')),
-    url(r'^apps/$', TemplateView.as_view(template_name='zerver/apps.html')),
+    url(r'^apps/$', zerver.views.home.apps_view, name='zerver.views.home.apps_view'),
 
     url(r'^robots\.txt$', RedirectView.as_view(url='/static/robots.txt', permanent=True)),
 

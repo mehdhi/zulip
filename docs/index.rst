@@ -107,9 +107,10 @@ Contents:
 
    testing
    linters
-   testing-with-node
    testing-with-django
+   testing-with-node
    testing-with-casper
+   travis
    manual-testing
 
 .. _subsystem-documentation:
@@ -132,11 +133,13 @@ Contents:
    hashchange-system
    emoji
    full-text-search
+   email
    analytics
    translating
    client
    logging
    release-checklist
    api-release-checklist
+   swagger-api-docs
    README
    user-docs

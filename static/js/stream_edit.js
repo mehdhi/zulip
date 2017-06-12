@@ -183,8 +183,7 @@ function show_subscription_settings(sub_row) {
         source: people.get_realm_persons, // This is a function.
         items: 5,
         highlighter: function (item) {
-            var item_formatted = typeahead_helper.render_person(item);
-            return typeahead_helper.highlight_with_escaping(this.query, item_formatted);
+            return typeahead_helper.render_person(this.query, item);
         },
         matcher: function (item) {
             var query = $.trim(this.query.toLowerCase());
@@ -255,20 +254,12 @@ exports.set_stream_property = function (sub, property, value) {
     });
 };
 
-function set_notification_setting_for_all_streams(notification_type, new_setting) {
+exports.set_notification_setting_for_all_streams = function (notification_type, new_setting) {
     _.each(stream_data.subscribed_subs(), function (sub) {
         if (sub[notification_type] !== new_setting) {
             exports.set_stream_property(sub, notification_type, new_setting);
         }
     });
-}
-
-exports.set_all_stream_desktop_notifications_to = function (new_setting) {
-    set_notification_setting_for_all_streams("desktop_notifications", new_setting);
-};
-
-exports.set_all_stream_audible_notifications_to = function (new_setting) {
-    set_notification_setting_for_all_streams("audible_notifications", new_setting);
 };
 
 function redraw_privacy_related_stuff(sub_row, sub) {

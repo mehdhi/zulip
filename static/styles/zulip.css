@@ -772,6 +772,14 @@ td.pointer {
     display: none;
 }
 
+/*
+   used to override .hide-date when floating_recipient_bar just begins to
+   overlap the top-most recipient_bar
+*/
+.recipient_row_date.temp-show-date {
+    display: block !important;
+}
+
 .floating_recipient .recipient_row_date.hide-date {
     display: block;
 }
@@ -1463,7 +1471,7 @@ blockquote p {
 }
 
 .bookend {
-    padding-top: 10px;
+    margin-top: 10px;
     background-color: transparent;
 }
 
@@ -1892,15 +1900,14 @@ nav a .no-style {
 }
 
 .highlight_text_inserted {
-    background-color: #E6EDFF;
+    color: #158318;
+    background-color: #E9FBE9;
 }
 
 .highlight_text_deleted {
-    background-color: #FFE6E6;
-}
-
-.highlight_text_replaced {
-    background-color: #F5E6FF;
+    color: #BBBBBB;
+    text-decoration: line-through;
+    background-color: #FEDFDB;
 }
 
 #search_arrows {
@@ -2186,12 +2193,6 @@ div.floating_recipient {
     cursor: pointer;
 }
 
-.stream_sub_unsub_button {
-    min-width: 140px;
-    margin-top: 9px;
-    margin-right: 10px;
-}
-
 .sub_button_row {
     text-align: center;
 }
@@ -2358,12 +2359,6 @@ img.emoji {
     top: 3px;
 }
 
-.emoji.realm-emoji {
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
 .twitter-tweet {
     border: 1px solid #ddd;
     padding: .5em .75em;
@@ -2422,7 +2417,7 @@ img.emoji {
 .sub-unsub-message,
 .date_row {
     text-align: center;
-    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 
 .date_row .date-direction {
@@ -2439,6 +2434,7 @@ img.emoji {
     margin: 0px 5px 0px 5px;
 }
 
+.sub-unsub-message span,
 .date_row span {
     display: block;
     background: inherit;
@@ -2450,6 +2446,13 @@ img.emoji {
     text-shadow: 1px 1px 0px #fff;
 }
 
+.sub-unsub-message span {
+    font-size: 1em;
+    text-transform: none;
+}
+
+.sub-unsub-message span:before,
+.sub-unsub-message span:after,
 .date_row span:before,
 .date_row span:after {
     display: inline-block;
@@ -2462,11 +2465,13 @@ img.emoji {
     border-bottom: 1px solid #fff;
 }
 
+.sub-unsub-message span:before,
 .date_row span:before {
     right: 0.5em;
     margin-left: -50%;
 }
 
+.sub-unsub-message span:after,
 .date_row span:after {
     left: 0.5em;
     margin-right: -50%;

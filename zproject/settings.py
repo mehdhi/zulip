@@ -11,6 +11,7 @@ from __future__ import absolute_import
 # See http://zulip.readthedocs.io/en/latest/settings.html for more information
 #
 ########################################################################
+from copy import deepcopy
 import os
 import platform
 import time
@@ -296,31 +297,50 @@ if PRODUCTION:
     # Template caching is a significant performance win in production.
     LOADERS = [('django.template.loaders.cached.Loader', LOADERS)]
 
-TEMPLATES = [
-    {
-        'NAME': 'Jinja2',
-        'BACKEND': 'zproject.jinja2.backends.Jinja2',
-        'DIRS': [
-            os.path.join(DEPLOY_ROOT, 'templates'),
-            os.path.join(DEPLOY_ROOT, 'zerver', 'webhooks'),
+base_template_engine_settings = {
+    'BACKEND': 'zproject.jinja2.backends.Jinja2',
+    'OPTIONS': {
+        'debug': DEBUG,
+        'environment': 'zproject.jinja2.environment',
+        'extensions': [
+            'jinja2.ext.i18n',
+            'jinja2.ext.autoescape',
+            'pipeline.jinja2.PipelineExtension',
+            'webpack_loader.contrib.jinja2ext.WebpackExtension',
         ],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'debug': DEBUG,
-            'environment': 'zproject.jinja2.environment',
-            'extensions': [
-                'jinja2.ext.i18n',
-                'jinja2.ext.autoescape',
-                'pipeline.jinja2.PipelineExtension',
-                'webpack_loader.contrib.jinja2ext.WebpackExtension',
-            ],
-            'context_processors': [
-                'zerver.context_processors.zulip_default_context',
-                'zerver.context_processors.add_metrics',
-                'django.template.context_processors.i18n',
-            ],
-        },
+        'context_processors': [
+            'zerver.context_processors.zulip_default_context',
+            'zerver.context_processors.add_metrics',
+            'django.template.context_processors.i18n',
+        ],
     },
+}
+
+default_template_engine_settings = deepcopy(base_template_engine_settings)
+default_template_engine_settings.update({
+    'NAME': 'Jinja2',
+    'DIRS': [
+        os.path.join(DEPLOY_ROOT, 'templates'),
+        os.path.join(DEPLOY_ROOT, 'zerver', 'webhooks'),
+    ],
+    'APP_DIRS': True,
+})
+
+non_html_template_engine_settings = deepcopy(base_template_engine_settings)
+non_html_template_engine_settings.update({
+    'NAME': 'Jinja2_plaintext',
+    'DIRS': [os.path.join(DEPLOY_ROOT, 'templates')],
+    'APP_DIRS': False,
+})
+non_html_template_engine_settings['OPTIONS'].update({
+    'autoescape': False,
+})
+
+# The order here is important; get_template and related/parent functions try
+# the template engines in order until one succeeds.
+TEMPLATES = [
+    default_template_engine_settings,
+    non_html_template_engine_settings,
 ]
 
 MIDDLEWARE_CLASSES = (
@@ -728,8 +748,8 @@ PIPELINE = {
                 'third/bootstrap-notify/css/bootstrap-notify.css',
                 'third/spectrum/spectrum.css',
                 'third/thirdparty-fonts.css',
-                'third/jquery-perfect-scrollbar/css/perfect-scrollbar.css',
                 'node_modules/katex/dist/katex.css',
+                'node_modules/perfect-scrollbar/dist/css/perfect-scrollbar.css',
                 'styles/components.css',
                 'styles/zulip.css',
                 'styles/alerts.css',
@@ -821,10 +841,6 @@ JS_SPECS = {
         ],
         'output_filename': 'min/zxcvbn.js'
     },
-    'api': {
-        'source_filenames': ['js/portico/api.js'],
-        'output_filename': 'min/api.js'
-    },
     'app_debug': {
         'source_filenames': ['js/debug.js'],
         'output_filename': 'min/app_debug.js'
@@ -843,7 +859,7 @@ JS_SPECS = {
             'third/jquery-throttle-debounce/jquery.ba-throttle-debounce.js',
             'third/jquery-idle/jquery.idle.js',
             'third/jquery-autosize/jquery.autosize.js',
-            'third/jquery-perfect-scrollbar/js/perfect-scrollbar.js',
+            'node_modules/perfect-scrollbar/dist/js/perfect-scrollbar.jquery.js',
             'third/lazyload/lazyload.js',
             'third/spectrum/spectrum.js',
             'third/sockjs/sockjs-0.3.4.js',
@@ -1003,12 +1019,6 @@ JS_SPECS = {
     'sockjs': {
         'source_filenames': ['third/sockjs/sockjs-0.3.4.js'],
         'output_filename': 'min/sockjs-0.3.4.min.js'
-    },
-    'katex': {
-        'source_filenames': [
-            'node_modules/katex/dist/katex.js',
-        ],
-        'output_filename': 'min/katex.js'
     }
 }
 
